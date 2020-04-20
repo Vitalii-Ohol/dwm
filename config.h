@@ -17,21 +17,16 @@ static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
 static const char *fonts[]          = { "monospace:size=14" };
 static const char dmenufont[]       = "monospace:size=14";
-static const char col_gray1[]       = "#073642";
-static const char col_gray2[]       = "#444444";
-static const char col_gray3[]       = "#bbbbbb";
-static const char col_gray4[]       = "#eeeeee";
-static const char col_cyan[]        = "#002b36";
-
-static const char col_white[]        = "#fcfdfe";
-static const char col_gray[]        = "#363237";
-
-static const char *colors[][3]      = {
-	/*               fg         bg         border   */
-	//[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
-	//[SchemeSel]  = { col_gray4, col_cyan,  col_cyan  },
-	[SchemeNorm] = { col_gray, col_white, col_white },
-	[SchemeSel]  = { col_white, col_gray,  col_gray  },
+static char normbgcolor[]           = "#fcfdfe";
+static char normbordercolor[]       = "#fcfdfe";
+static char normfgcolor[]           = "#363237";
+static char selfgcolor[]            = "#fcfdfe";
+static char selbordercolor[]        = "#363237";
+static char selbgcolor[]            = "#363237";
+static char *colors[][3] = {
+       /*               fg           bg           border   */
+       [SchemeNorm] = { normfgcolor, normbgcolor, normbordercolor },
+       [SchemeSel]  = { selfgcolor,  selbgcolor,  selbordercolor  },
 };
 
 /* tagging */
