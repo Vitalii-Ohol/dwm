@@ -1,19 +1,21 @@
-From 88b8ce58531ef59fd91840a25eb26e0ae8908313 Mon Sep 17 00:00:00 2001
+From e1d968f0d60fcfe7c1a410af53ea6ac534078033 Mon Sep 17 00:00:00 2001
 From: Vitalii-Ohol <ohol.vitaliy@gmail.com>
-Date: Fri, 17 Apr 2020 17:22:06 -0400
-Subject: [PATCH] added all patches
+Date: Mon, 20 Apr 2020 06:36:33 -0400
+Subject: [PATCH] bunch of patches
 
 ---
- config.def.h |  48 ++--
+ config.def.h |  66 +++--
  config.mk    |   6 +-
- dwm.c        | 630 ++++++++++++++++++++++++++++++++++++++++++++++++---
- 3 files changed, 627 insertions(+), 57 deletions(-)
+ drw.c        |   2 +-
+ drw.h        |   2 +-
+ dwm.c        | 692 ++++++++++++++++++++++++++++++++++++++++++++++++---
+ 5 files changed, 701 insertions(+), 67 deletions(-)
 
 diff --git a/config.def.h b/config.def.h
-index 1c0b587..530e0f4 100644
+index 1c0b587..dc49e05 100644
 --- a/config.def.h
 +++ b/config.def.h
-@@ -1,17 +1,27 @@
+@@ -1,21 +1,32 @@
  /* See LICENSE file for copyright and license details. */
  
  /* appearance */
@@ -36,16 +38,28 @@ index 1c0b587..530e0f4 100644
  static const char *fonts[]          = { "monospace:size=10" };
  static const char dmenufont[]       = "monospace:size=10";
 -static const char col_gray1[]       = "#222222";
-+static const char col_gray1[]       = "#073642";
- static const char col_gray2[]       = "#444444";
- static const char col_gray3[]       = "#bbbbbb";
- static const char col_gray4[]       = "#eeeeee";
+-static const char col_gray2[]       = "#444444";
+-static const char col_gray3[]       = "#bbbbbb";
+-static const char col_gray4[]       = "#eeeeee";
 -static const char col_cyan[]        = "#005577";
-+static const char col_cyan[]        = "#002b36";
- static const char *colors[][3]      = {
- 	/*               fg         bg         border   */
- 	[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
-@@ -28,13 +38,13 @@ static const Rule rules[] = {
+-static const char *colors[][3]      = {
+-	/*               fg         bg         border   */
+-	[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
+-	[SchemeSel]  = { col_gray4, col_cyan,  col_cyan  },
++static char normbgcolor[]           = "#222222";
++static char normbordercolor[]       = "#444444";
++static char normfgcolor[]           = "#bbbbbb";
++static char selfgcolor[]            = "#eeeeee";
++static char selbordercolor[]        = "#005577";
++static char selbgcolor[]            = "#005577";
++static char *colors[][3] = {
++       /*               fg           bg           border   */
++       [SchemeNorm] = { normfgcolor, normbgcolor, normbordercolor },
++       [SchemeSel]  = { selfgcolor,  selbgcolor,  selbordercolor  },
+ };
+ 
+ /* tagging */
+@@ -28,13 +39,13 @@ static const Rule rules[] = {
  	 */
  	/* class      instance    title       tags mask     isfloating   monitor */
  	{ "Gimp",     NULL,       NULL,       0,            1,           -1 },
@@ -61,7 +75,7 @@ index 1c0b587..530e0f4 100644
  
  static const Layout layouts[] = {
  	/* symbol     arrange function */
-@@ -44,7 +54,7 @@ static const Layout layouts[] = {
+@@ -44,7 +55,7 @@ static const Layout layouts[] = {
  };
  
  /* key definitions */
@@ -70,7 +84,13 @@ index 1c0b587..530e0f4 100644
  #define TAGKEYS(KEY,TAG) \
  	{ MODKEY,                       KEY,      view,           {.ui = 1 << TAG} }, \
  	{ MODKEY|ControlMask,           KEY,      toggleview,     {.ui = 1 << TAG} }, \
-@@ -61,23 +71,25 @@ static const char *termcmd[]  = { "st", NULL };
+@@ -56,34 +67,37 @@ static const Layout layouts[] = {
+ 
+ /* commands */
+ static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
+-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
++static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", normbgcolor, "-nf", normfgcolor, "-sb", selbordercolor, "-sf", selfgcolor, NULL };
+ static const char *termcmd[]  = { "st", NULL };
  
  static Key keys[] = {
  	/* modifier                     key        function        argument */
@@ -105,7 +125,14 @@ index 1c0b587..530e0f4 100644
  	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
  	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
  	{ MODKEY,                       XK_comma,  focusmon,       {.i = -1 } },
-@@ -93,7 +105,9 @@ static Key keys[] = {
+ 	{ MODKEY,                       XK_period, focusmon,       {.i = +1 } },
+ 	{ MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
+ 	{ MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
++	{ MODKEY,                       XK_F5,     xrdb,           {.v = NULL } },
+ 	TAGKEYS(                        XK_1,                      0)
+ 	TAGKEYS(                        XK_2,                      1)
+ 	TAGKEYS(                        XK_3,                      2)
+@@ -93,7 +107,9 @@ static Key keys[] = {
  	TAGKEYS(                        XK_7,                      6)
  	TAGKEYS(                        XK_8,                      7)
  	TAGKEYS(                        XK_9,                      8)
@@ -140,11 +167,42 @@ index 7084c33..9b964f7 100644
  
  # flags
  CPPFLAGS = -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_POSIX_C_SOURCE=200809L -DVERSION=\"${VERSION}\" ${XINERAMAFLAGS}
+diff --git a/drw.c b/drw.c
+index 8fd1ca4..e4968a0 100644
+--- a/drw.c
++++ b/drw.c
+@@ -207,7 +207,7 @@ drw_clr_create(Drw *drw, Clr *dest, const char *clrname)
+ /* Wrapper to create color schemes. The caller has to call free(3) on the
+  * returned color scheme when done using it. */
+ Clr *
+-drw_scm_create(Drw *drw, const char *clrnames[], size_t clrcount)
++drw_scm_create(Drw *drw, char *clrnames[], size_t clrcount)
+ {
+ 	size_t i;
+ 	Clr *ret;
+diff --git a/drw.h b/drw.h
+index 4bcd5ad..42b04ce 100644
+--- a/drw.h
++++ b/drw.h
+@@ -39,7 +39,7 @@ void drw_font_getexts(Fnt *font, const char *text, unsigned int len, unsigned in
+ 
+ /* Colorscheme abstraction */
+ void drw_clr_create(Drw *drw, Clr *dest, const char *clrname);
+-Clr *drw_scm_create(Drw *drw, const char *clrnames[], size_t clrcount);
++Clr *drw_scm_create(Drw *drw, char *clrnames[], size_t clrcount);
+ 
+ /* Cursor abstraction */
+ Cur *drw_cur_create(Drw *drw, int shape);
 diff --git a/dwm.c b/dwm.c
-index 4465af1..8f23691 100644
+index 4465af1..b02115c 100644
 --- a/dwm.c
 +++ b/dwm.c
-@@ -39,6 +39,7 @@
+@@ -35,10 +35,12 @@
+ #include <X11/Xatom.h>
+ #include <X11/Xlib.h>
+ #include <X11/Xproto.h>
++#include <X11/Xresource.h>
+ #include <X11/Xutil.h>
  #ifdef XINERAMA
  #include <X11/extensions/Xinerama.h>
  #endif /* XINERAMA */
@@ -152,10 +210,26 @@ index 4465af1..8f23691 100644
  #include <X11/Xft/Xft.h>
  
  #include "drw.h"
-@@ -57,12 +58,30 @@
+@@ -56,13 +58,46 @@
+ #define HEIGHT(X)               ((X)->h + 2 * (X)->bw)
  #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
  #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
- 
++#define XRDB_LOAD_COLOR(R,V)    if (XrmGetResource(xrdb, R, NULL, &type, &value) == True) { \
++                                  if (value.addr != NULL && strnlen(value.addr, 8) == 7 && value.addr[0] == '#') { \
++                                    int i = 1; \
++                                    for (; i <= 6; i++) { \
++                                      if (value.addr[i] < 48) break; \
++                                      if (value.addr[i] > 57 && value.addr[i] < 65) break; \
++                                      if (value.addr[i] > 70 && value.addr[i] < 97) break; \
++                                      if (value.addr[i] > 102) break; \
++                                    } \
++                                    if (i == 7) { \
++                                      strncpy(V, value.addr, 7); \
++                                      V[7] = '\0'; \
++                                    } \
++                                  } \
++                                }
++
 +#define SYSTEM_TRAY_REQUEST_DOCK    0
 +
 +/* XEMBED messages */
@@ -171,7 +245,7 @@ index 4465af1..8f23691 100644
 +#define VERSION_MAJOR               0
 +#define VERSION_MINOR               0
 +#define XEMBED_EMBEDDED_VERSION (VERSION_MAJOR << 16) | VERSION_MINOR
-+
+ 
  /* enums */
  enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
  enum { SchemeNorm, SchemeSel }; /* color schemes */
@@ -183,7 +257,7 @@ index 4465af1..8f23691 100644
  enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms */
  enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
         ClkClientWin, ClkRootWin, ClkLast }; /* clicks */
-@@ -119,6 +138,10 @@ struct Monitor {
+@@ -119,6 +154,10 @@ struct Monitor {
  	int by;               /* bar geometry */
  	int mx, my, mw, mh;   /* screen size */
  	int wx, wy, ww, wh;   /* window area  */
@@ -194,7 +268,7 @@ index 4465af1..8f23691 100644
  	unsigned int seltags;
  	unsigned int sellt;
  	unsigned int tagset[2];
-@@ -141,6 +164,12 @@ typedef struct {
+@@ -141,6 +180,12 @@ typedef struct {
  	int monitor;
  } Rule;
  
@@ -207,7 +281,7 @@ index 4465af1..8f23691 100644
  /* function declarations */
  static void applyrules(Client *c);
  static int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
-@@ -169,8 +198,10 @@ static void focus(Client *c);
+@@ -169,14 +214,17 @@ static void focus(Client *c);
  static void focusin(XEvent *e);
  static void focusmon(const Arg *arg);
  static void focusstack(const Arg *arg);
@@ -218,7 +292,14 @@ index 4465af1..8f23691 100644
  static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
  static void grabbuttons(Client *c, int focused);
  static void grabkeys(void);
-@@ -188,17 +219,31 @@ static void pop(Client *);
+ static void incnmaster(const Arg *arg);
+ static void keypress(XEvent *e);
+ static void killclient(const Arg *arg);
++static void loadxrdb(void);
+ static void manage(Window w, XWindowAttributes *wa);
+ static void mappingnotify(XEvent *e);
+ static void maprequest(XEvent *e);
+@@ -188,17 +236,31 @@ static void pop(Client *);
  static void propertynotify(XEvent *e);
  static void quit(const Arg *arg);
  static Monitor *recttomon(int x, int y, int w, int h);
@@ -251,7 +332,7 @@ index 4465af1..8f23691 100644
  static void setlayout(const Arg *arg);
  static void setmfact(const Arg *arg);
  static void setup(void);
-@@ -206,6 +251,7 @@ static void seturgent(Client *c, int urg);
+@@ -206,6 +268,7 @@ static void seturgent(Client *c, int urg);
  static void showhide(Client *c);
  static void sigchld(int unused);
  static void spawn(const Arg *arg);
@@ -259,7 +340,7 @@ index 4465af1..8f23691 100644
  static void tag(const Arg *arg);
  static void tagmon(const Arg *arg);
  static void tile(Monitor *);
-@@ -223,23 +269,31 @@ static int updategeom(void);
+@@ -223,23 +286,32 @@ static int updategeom(void);
  static void updatenumlockmask(void);
  static void updatesizehints(Client *c);
  static void updatestatus(void);
@@ -276,6 +357,7 @@ index 4465af1..8f23691 100644
  static int xerror(Display *dpy, XErrorEvent *ee);
  static int xerrordummy(Display *dpy, XErrorEvent *ee);
  static int xerrorstart(Display *dpy, XErrorEvent *ee);
++static void xrdb(const Arg *arg);
  static void zoom(const Arg *arg);
  
  /* variables */
@@ -291,7 +373,7 @@ index 4465af1..8f23691 100644
  static int lrpad;            /* sum of left and right padding for text */
  static int (*xerrorxlib)(Display *, XErrorEvent *);
  static unsigned int numlockmask = 0;
-@@ -257,9 +311,10 @@ static void (*handler[LASTEvent]) (XEvent *) = {
+@@ -257,9 +329,10 @@ static void (*handler[LASTEvent]) (XEvent *) = {
  	[MapRequest] = maprequest,
  	[MotionNotify] = motionnotify,
  	[PropertyNotify] = propertynotify,
@@ -303,7 +385,7 @@ index 4465af1..8f23691 100644
  static int running = 1;
  static Cur *cursor[CurLast];
  static Clr **scheme;
-@@ -439,7 +494,7 @@ buttonpress(XEvent *e)
+@@ -439,7 +512,7 @@ buttonpress(XEvent *e)
  			arg.ui = 1 << i;
  		} else if (ev->x < x + blw)
  			click = ClkLtSymbol;
@@ -312,7 +394,7 @@ index 4465af1..8f23691 100644
  			click = ClkStatusText;
  		else
  			click = ClkWinTitle;
-@@ -482,6 +537,11 @@ cleanup(void)
+@@ -482,6 +555,11 @@ cleanup(void)
  	XUngrabKey(dpy, AnyKey, AnyModifier, root);
  	while (mons)
  		cleanupmon(mons);
@@ -324,7 +406,7 @@ index 4465af1..8f23691 100644
  	for (i = 0; i < CurLast; i++)
  		drw_cur_free(drw, cursor[i]);
  	for (i = 0; i < LENGTH(colors); i++)
-@@ -512,9 +572,57 @@ cleanupmon(Monitor *mon)
+@@ -512,9 +590,57 @@ cleanupmon(Monitor *mon)
  void
  clientmessage(XEvent *e)
  {
@@ -382,7 +464,7 @@ index 4465af1..8f23691 100644
  	if (!c)
  		return;
  	if (cme->message_type == netatom[NetWMState]) {
-@@ -567,7 +675,7 @@ configurenotify(XEvent *e)
+@@ -567,7 +693,7 @@ configurenotify(XEvent *e)
  				for (c = m->clients; c; c = c->next)
  					if (c->isfullscreen)
  						resizeclient(c, m->mx, m->my, m->mw, m->mh);
@@ -391,7 +473,7 @@ index 4465af1..8f23691 100644
  			}
  			focus(NULL);
  			arrange(NULL);
-@@ -638,6 +746,10 @@ createmon(void)
+@@ -638,6 +764,10 @@ createmon(void)
  	m->nmaster = nmaster;
  	m->showbar = showbar;
  	m->topbar = topbar;
@@ -402,7 +484,7 @@ index 4465af1..8f23691 100644
  	m->lt[0] = &layouts[0];
  	m->lt[1] = &layouts[1 % LENGTH(layouts)];
  	strncpy(m->ltsymbol, layouts[0].symbol, sizeof m->ltsymbol);
-@@ -652,6 +764,11 @@ destroynotify(XEvent *e)
+@@ -652,6 +782,11 @@ destroynotify(XEvent *e)
  
  	if ((c = wintoclient(ev->window)))
  		unmanage(c, 1);
@@ -414,7 +496,7 @@ index 4465af1..8f23691 100644
  }
  
  void
-@@ -695,19 +812,23 @@ dirtomon(int dir)
+@@ -695,19 +830,23 @@ dirtomon(int dir)
  void
  drawbar(Monitor *m)
  {
@@ -441,7 +523,7 @@ index 4465af1..8f23691 100644
  	for (c = m->clients; c; c = c->next) {
  		occ |= c->tags;
  		if (c->isurgent)
-@@ -728,10 +849,11 @@ drawbar(Monitor *m)
+@@ -728,10 +867,11 @@ drawbar(Monitor *m)
  	drw_setscheme(drw, scheme[SchemeNorm]);
  	x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
  
@@ -455,7 +537,7 @@ index 4465af1..8f23691 100644
  			if (m->sel->isfloating)
  				drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
  		} else {
-@@ -739,7 +861,7 @@ drawbar(Monitor *m)
+@@ -739,7 +879,7 @@ drawbar(Monitor *m)
  			drw_rect(drw, x, 0, w, bh, 1, 1);
  		}
  	}
@@ -464,7 +546,7 @@ index 4465af1..8f23691 100644
  }
  
  void
-@@ -776,8 +898,11 @@ expose(XEvent *e)
+@@ -776,8 +916,11 @@ expose(XEvent *e)
  	Monitor *m;
  	XExposeEvent *ev = &e->xexpose;
  
@@ -477,7 +559,7 @@ index 4465af1..8f23691 100644
  }
  
  void
-@@ -862,10 +987,17 @@ getatomprop(Client *c, Atom prop)
+@@ -862,10 +1005,17 @@ getatomprop(Client *c, Atom prop)
  	unsigned long dl;
  	unsigned char *p = NULL;
  	Atom da, atom = None;
@@ -496,7 +578,7 @@ index 4465af1..8f23691 100644
  		XFree(p);
  	}
  	return atom;
-@@ -899,6 +1031,16 @@ getstate(Window w)
+@@ -899,6 +1049,16 @@ getstate(Window w)
  	return result;
  }
  
@@ -513,7 +595,7 @@ index 4465af1..8f23691 100644
  int
  gettextprop(Window w, Atom atom, char *text, unsigned int size)
  {
-@@ -1003,7 +1145,7 @@ killclient(const Arg *arg)
+@@ -1003,7 +1163,7 @@ killclient(const Arg *arg)
  {
  	if (!selmon->sel)
  		return;
@@ -522,7 +604,45 @@ index 4465af1..8f23691 100644
  		XGrabServer(dpy);
  		XSetErrorHandler(xerrordummy);
  		XSetCloseDownMode(dpy, DestroyAll);
-@@ -1091,6 +1233,12 @@ maprequest(XEvent *e)
+@@ -1014,6 +1174,37 @@ killclient(const Arg *arg)
+ 	}
+ }
+ 
++void
++loadxrdb()
++{
++  Display *display;
++  char * resm;
++  XrmDatabase xrdb;
++  char *type;
++  XrmValue value;
++
++  display = XOpenDisplay(NULL);
++
++  if (display != NULL) {
++    resm = XResourceManagerString(display);
++
++    if (resm != NULL) {
++      xrdb = XrmGetStringDatabase(resm);
++
++      if (xrdb != NULL) {
++        XRDB_LOAD_COLOR("dwm.normbordercolor", normbordercolor);
++        XRDB_LOAD_COLOR("dwm.normbgcolor", normbgcolor);
++        XRDB_LOAD_COLOR("dwm.normfgcolor", normfgcolor);
++        XRDB_LOAD_COLOR("dwm.selbordercolor", selbordercolor);
++        XRDB_LOAD_COLOR("dwm.selbgcolor", selbgcolor);
++        XRDB_LOAD_COLOR("dwm.selfgcolor", selfgcolor);
++      }
++    }
++  }
++
++  XCloseDisplay(display);
++}
++
+ void
+ manage(Window w, XWindowAttributes *wa)
+ {
+@@ -1091,6 +1282,12 @@ maprequest(XEvent *e)
  {
  	static XWindowAttributes wa;
  	XMapRequestEvent *ev = &e->xmaprequest;
@@ -535,7 +655,7 @@ index 4465af1..8f23691 100644
  
  	if (!XGetWindowAttributes(dpy, ev->window, &wa))
  		return;
-@@ -1215,6 +1363,16 @@ propertynotify(XEvent *e)
+@@ -1215,6 +1412,16 @@ propertynotify(XEvent *e)
  	Window trans;
  	XPropertyEvent *ev = &e->xproperty;
  
@@ -552,7 +672,7 @@ index 4465af1..8f23691 100644
  	if ((ev->window == root) && (ev->atom == XA_WM_NAME))
  		updatestatus();
  	else if (ev->state == PropertyDelete)
-@@ -1265,6 +1423,20 @@ recttomon(int x, int y, int w, int h)
+@@ -1265,6 +1472,20 @@ recttomon(int x, int y, int w, int h)
  	return r;
  }
  
@@ -573,7 +693,7 @@ index 4465af1..8f23691 100644
  void
  resize(Client *c, int x, int y, int w, int h, int interact)
  {
-@@ -1272,6 +1444,14 @@ resize(Client *c, int x, int y, int w, int h, int interact)
+@@ -1272,6 +1493,14 @@ resize(Client *c, int x, int y, int w, int h, int interact)
  		resizeclient(c, x, y, w, h);
  }
  
@@ -588,7 +708,7 @@ index 4465af1..8f23691 100644
  void
  resizeclient(Client *c, int x, int y, int w, int h)
  {
-@@ -1284,6 +1464,7 @@ resizeclient(Client *c, int x, int y, int w, int h)
+@@ -1284,6 +1513,7 @@ resizeclient(Client *c, int x, int y, int w, int h)
  	wc.border_width = c->bw;
  	XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
  	configure(c);
@@ -596,7 +716,7 @@ index 4465af1..8f23691 100644
  	XSync(dpy, False);
  }
  
-@@ -1344,6 +1525,19 @@ resizemouse(const Arg *arg)
+@@ -1344,6 +1574,19 @@ resizemouse(const Arg *arg)
  	}
  }
  
@@ -616,7 +736,7 @@ index 4465af1..8f23691 100644
  void
  restack(Monitor *m)
  {
-@@ -1351,6 +1545,9 @@ restack(Monitor *m)
+@@ -1351,6 +1594,9 @@ restack(Monitor *m)
  	XEvent ev;
  	XWindowChanges wc;
  
@@ -626,7 +746,7 @@ index 4465af1..8f23691 100644
  	drawbar(m);
  	if (!m->sel)
  		return;
-@@ -1433,26 +1630,36 @@ setclientstate(Client *c, long state)
+@@ -1433,26 +1679,36 @@ setclientstate(Client *c, long state)
  }
  
  int
@@ -674,7 +794,7 @@ index 4465af1..8f23691 100644
  	}
  	return exists;
  }
-@@ -1466,7 +1673,113 @@ setfocus(Client *c)
+@@ -1466,7 +1722,113 @@ setfocus(Client *c)
  			XA_WINDOW, 32, PropModeReplace,
  			(unsigned char *) &(c->win), 1);
  	}
@@ -789,7 +909,7 @@ index 4465af1..8f23691 100644
  }
  
  void
-@@ -1497,6 +1810,21 @@ setfullscreen(Client *c, int fullscreen)
+@@ -1497,6 +1859,21 @@ setfullscreen(Client *c, int fullscreen)
  	}
  }
  
@@ -811,7 +931,7 @@ index 4465af1..8f23691 100644
  void
  setlayout(const Arg *arg)
  {
-@@ -1555,6 +1883,10 @@ setup(void)
+@@ -1555,6 +1932,10 @@ setup(void)
  	wmatom[WMTakeFocus] = XInternAtom(dpy, "WM_TAKE_FOCUS", False);
  	netatom[NetActiveWindow] = XInternAtom(dpy, "_NET_ACTIVE_WINDOW", False);
  	netatom[NetSupported] = XInternAtom(dpy, "_NET_SUPPORTED", False);
@@ -822,7 +942,7 @@ index 4465af1..8f23691 100644
  	netatom[NetWMName] = XInternAtom(dpy, "_NET_WM_NAME", False);
  	netatom[NetWMState] = XInternAtom(dpy, "_NET_WM_STATE", False);
  	netatom[NetWMCheck] = XInternAtom(dpy, "_NET_SUPPORTING_WM_CHECK", False);
-@@ -1562,6 +1894,9 @@ setup(void)
+@@ -1562,6 +1943,9 @@ setup(void)
  	netatom[NetWMWindowType] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
  	netatom[NetWMWindowTypeDialog] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
  	netatom[NetClientList] = XInternAtom(dpy, "_NET_CLIENT_LIST", False);
@@ -832,7 +952,7 @@ index 4465af1..8f23691 100644
  	/* init cursors */
  	cursor[CurNormal] = drw_cur_create(drw, XC_left_ptr);
  	cursor[CurResize] = drw_cur_create(drw, XC_sizing);
-@@ -1570,6 +1905,8 @@ setup(void)
+@@ -1570,6 +1954,8 @@ setup(void)
  	scheme = ecalloc(LENGTH(colors), sizeof(Clr *));
  	for (i = 0; i < LENGTH(colors); i++)
  		scheme[i] = drw_scm_create(drw, colors[i], 3);
@@ -841,7 +961,7 @@ index 4465af1..8f23691 100644
  	/* init bars */
  	updatebars();
  	updatestatus();
-@@ -1673,26 +2010,33 @@ tagmon(const Arg *arg)
+@@ -1673,26 +2059,33 @@ tagmon(const Arg *arg)
  void
  tile(Monitor *m)
  {
@@ -885,7 +1005,7 @@ index 4465af1..8f23691 100644
  		}
  }
  
-@@ -1701,7 +2045,18 @@ togglebar(const Arg *arg)
+@@ -1701,7 +2094,18 @@ togglebar(const Arg *arg)
  {
  	selmon->showbar = !selmon->showbar;
  	updatebarpos(selmon);
@@ -905,7 +1025,7 @@ index 4465af1..8f23691 100644
  	arrange(selmon);
  }
  
-@@ -1796,11 +2151,18 @@ unmapnotify(XEvent *e)
+@@ -1796,11 +2200,18 @@ unmapnotify(XEvent *e)
  		else
  			unmanage(c, 0);
  	}
@@ -924,7 +1044,7 @@ index 4465af1..8f23691 100644
  	Monitor *m;
  	XSetWindowAttributes wa = {
  		.override_redirect = True,
-@@ -1811,10 +2173,15 @@ updatebars(void)
+@@ -1811,10 +2222,15 @@ updatebars(void)
  	for (m = mons; m; m = m->next) {
  		if (m->barwin)
  			continue;
@@ -941,7 +1061,7 @@ index 4465af1..8f23691 100644
  		XMapRaised(dpy, m->barwin);
  		XSetClassHint(dpy, m->barwin, &ch);
  	}
-@@ -1990,6 +2357,121 @@ updatestatus(void)
+@@ -1990,6 +2406,121 @@ updatestatus(void)
  	if (!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
  		strcpy(stext, "dwm-"VERSION);
  	drawbar(selmon);
@@ -1063,7 +1183,7 @@ index 4465af1..8f23691 100644
  }
  
  void
-@@ -2057,6 +2539,16 @@ wintoclient(Window w)
+@@ -2057,6 +2588,16 @@ wintoclient(Window w)
  	return NULL;
  }
  
@@ -1080,7 +1200,7 @@ index 4465af1..8f23691 100644
  Monitor *
  wintomon(Window w)
  {
-@@ -2110,6 +2602,22 @@ xerrorstart(Display *dpy, XErrorEvent *ee)
+@@ -2110,6 +2651,33 @@ xerrorstart(Display *dpy, XErrorEvent *ee)
  	return -1;
  }
  
@@ -1100,10 +1220,21 @@ index 4465af1..8f23691 100644
 +	return t;
 +}
 +
++void
++xrdb(const Arg *arg)
++{
++  loadxrdb();
++  int i;
++  for (i = 0; i < LENGTH(colors); i++)
++                scheme[i] = drw_scm_create(drw, colors[i], 3);
++  focus(NULL);
++  arrange(NULL);
++}
++
  void
  zoom(const Arg *arg)
  {
-@@ -2124,6 +2632,54 @@ zoom(const Arg *arg)
+@@ -2124,6 +2692,54 @@ zoom(const Arg *arg)
  	pop(c);
  }
  
@@ -1158,6 +1289,15 @@ index 4465af1..8f23691 100644
  int
  main(int argc, char *argv[])
  {
+@@ -2136,6 +2752,8 @@ main(int argc, char *argv[])
+ 	if (!(dpy = XOpenDisplay(NULL)))
+ 		die("dwm: cannot open display");
+ 	checkotherwm();
++        XrmInitialize();
++        loadxrdb();
+ 	setup();
+ #ifdef __OpenBSD__
+ 	if (pledge("stdio rpath proc exec", NULL) == -1)
 -- 
 2.20.1
 
